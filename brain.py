@@ -7,9 +7,9 @@ import numpy as np
 
 @dataclass
 class NetworkShape:
-    input_size: int = 3
-    hidden_size: int = 8
-    output_size: int = 2
+    input_size: int = 6      # Yem(mesafe, açı), Kendi(sağlık), Ajan(mesafe, açı, boyut_farkı)
+    hidden_size: int = 12    # Daha karmaşık kararlar için nöron sayısı artırıldı
+    output_size: int = 2     # İtme, Direksiyon
 
 
 class NeuralNetwork:
