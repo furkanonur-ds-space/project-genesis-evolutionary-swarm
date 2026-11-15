@@ -31,8 +31,32 @@ class RunConfig:
 
 
 @dataclass
+class ESConfig:
+    """Evolution Strategies settings (see egg/es.py)."""
+
+    population: int = 64        # lifetimes per generation; must be even (antithetic pairs)
+    sigma: float = 0.05         # std of the Gaussian perturbation
+    lr: float = 0.02            # Adam step size on the shared genome
+    weight_decay: float = 0.0   # L2 pull toward zero, added to the update
+    generations: int = 100
+    log_every: int = 1
+    checkpoint_every: int = 0   # 0 = only at the end
+
+
+@dataclass
+class ToyConfig:
+    """Toy objective used to test the ES trainer before real tasks."""
+
+    function: str = "sphere"    # "sphere" or "rastrigin"
+    dim: int = 100
+    init_scale: float = 3.0     # initial genome is drawn from N(0, init_scale^2)
+
+
+@dataclass
 class Config:
     run: RunConfig = field(default_factory=RunConfig)
+    es: ESConfig = field(default_factory=ESConfig)
+    toy: ToyConfig = field(default_factory=ToyConfig)
 
     def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)

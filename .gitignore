@@ -46,3 +46,6 @@ runs/
 !README.md
 .git-notes/
 .md_backup/
+
+# Downloaded papers (copyrighted PDFs, local only)
+papers/

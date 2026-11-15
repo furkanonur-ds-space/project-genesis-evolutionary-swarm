@@ -1,0 +1,16 @@
+# ES sanity check on a smooth bowl. Center fitness should approach 0.
+[run]
+name = "es_sphere"
+seed = 0
+
+[es]
+population = 64
+sigma = 0.1
+lr = 0.05
+generations = 300
+log_every = 10
+
+[toy]
+function = "sphere"
+dim = 100
+init_scale = 3.0

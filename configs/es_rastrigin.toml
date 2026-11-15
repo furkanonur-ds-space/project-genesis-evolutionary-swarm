@@ -1,0 +1,16 @@
+# ES on a bowl full of local traps. Harder; checks that noise helps escape.
+[run]
+name = "es_rastrigin"
+seed = 0
+
+[es]
+population = 256
+sigma = 2.0   # large noise smooths out the small local traps
+lr = 0.05
+generations = 500
+log_every = 25
+
+[toy]
+function = "rastrigin"
+dim = 20
+init_scale = 3.0
