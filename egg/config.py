@@ -53,10 +53,43 @@ class ToyConfig:
 
 
 @dataclass
+class ModelConfig:
+    kind: str = "colony"        # "colony" or "gru"
+    eval_chunk: int = 0         # evaluate the population in chunks of this size (0 = all at once)
+
+
+@dataclass
+class ColonyConfig:
+    rows: int = 6
+    cols: int = 6
+    hidden: int = 8
+    message: int = 4
+    embed: int = 8
+    ticks: int = 3
+
+
+@dataclass
+class GRUConfig:
+    hidden: int = 14
+
+
+@dataclass
+class CopyTaskConfig:
+    digits: int = 4
+    length: int = 3
+    batch: int = 32             # sequences per generation, shared by all lifetimes
+    val_batch: int = 512        # fixed validation set for the center genome
+
+
+@dataclass
 class Config:
     run: RunConfig = field(default_factory=RunConfig)
     es: ESConfig = field(default_factory=ESConfig)
     toy: ToyConfig = field(default_factory=ToyConfig)
+    model: ModelConfig = field(default_factory=ModelConfig)
+    colony: ColonyConfig = field(default_factory=ColonyConfig)
+    gru: GRUConfig = field(default_factory=GRUConfig)
+    copy: CopyTaskConfig = field(default_factory=CopyTaskConfig)
 
     def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)

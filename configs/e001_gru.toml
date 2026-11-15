@@ -1,0 +1,32 @@
+# E001: serial copy task, gru. See EXPERIMENTS.md.
+[run]
+name = "e001_gru"
+seed = 0
+
+[es]
+population = 128
+sigma = 0.05
+lr = 0.03
+generations = 1500
+log_every = 50
+checkpoint_every = 500
+
+[model]
+kind = "gru"
+
+[colony]
+rows = 6
+cols = 6
+hidden = 8
+message = 4
+embed = 8
+ticks = 3
+
+[gru]
+hidden = 15   # about 1100 parameters, matched to the colony (1080)
+
+[copy]
+digits = 4
+length = 3
+batch = 32
+val_batch = 512
