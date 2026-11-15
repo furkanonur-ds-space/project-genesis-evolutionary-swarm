@@ -57,16 +57,28 @@ class Colony:
         message: int = 4,
         embed: int = 8,
         ticks: int = 3,
+        wrap_cols: bool = True,
+        readout_ticks: int = 1,
+        learn_h0: bool = False,
     ) -> None:
         if cols < 2:
             raise ValueError("need at least 2 columns (input and output column)")
+        if not 1 <= readout_ticks <= ticks:
+            raise ValueError("readout_ticks must be between 1 and ticks")
         self.num_inputs, self.num_outputs = num_inputs, num_outputs
         self.rows, self.cols = rows, cols
         self.hidden, self.message, self.embed, self.ticks = hidden, message, embed, ticks
+        # wrap_cols=True lets the output column hear the input column directly
+        # (a one-hop shortcut around the colony). False makes the grid a
+        # cylinder: rows still wrap, columns do not.
+        self.wrap_cols = wrap_cols
+        self.readout_ticks = readout_ticks
+        self.learn_h0 = learn_h0
         self.num_neurons = rows * cols
         self.in_features = 4 * message + embed + POS_FEATURES
         h3 = 3 * hidden
-        self.spec = GenomeSpec([
+        extra = [ParamDef("h0", (hidden,), "zeros")] if learn_h0 else []
+        self.spec = GenomeSpec(extra + [
             ParamDef("w_msg", (hidden, message)),
             ParamDef("b_msg", (message,), "zeros"),
             ParamDef("w_in", (num_inputs, embed)),
@@ -85,16 +97,24 @@ class Colony:
         from_below = torch.roll(m, shifts=-1, dims=2)
         from_left = torch.roll(m, shifts=1, dims=3)
         from_right = torch.roll(m, shifts=-1, dims=3)
+        if not self.wrap_cols:
+            from_left = from_left.clone()
+            from_right = from_right.clone()
+            from_left[:, :, :, 0] = 0.0
+            from_right[:, :, :, -1] = 0.0
         return torch.cat([from_above, from_below, from_left, from_right], dim=-1)
 
     def forward(
-        self, genomes: torch.Tensor, tokens: torch.Tensor, record: bool = False
+        self, genomes: torch.Tensor, tokens: torch.Tensor, record: bool = False, ticks: int | None = None
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Run the colony over a token sequence.
 
+        ticks overrides the number of update rounds per symbol for this call.
         With record=True also returns the state of every neuron after every
         tick, shape (P, B, time*ticks, rows, cols, hidden), for visualization.
         """
+        ticks = ticks or self.ticks
+        readout = min(self.readout_ticks, ticks)
         w = self.spec.unflatten(genomes)
         device = genomes.device
         pop = w["w_x"].shape[0]
@@ -106,11 +126,14 @@ class Colony:
         out_cols = slice(C - 1, C)
 
         h = torch.zeros(pop, batch, R, C, H, device=device)
+        if self.learn_h0:
+            h = h + w["h0"][:, None, None, None, :]
         token_emb = w["w_in"][:, tokens]                     # (P, B, T, E)
         logits, states = [], []
         for t in range(steps):
             inject = token_emb[:, :, t, None, :] * input_mask  # (P, B, N, E)
-            for _ in range(self.ticks):
+            out_sum = 0.0
+            for k in range(ticks):
                 m = torch.tanh(
                     torch.einsum("pbrch,phm->pbrcm", h, w["w_msg"]) + w["b_msg"][:, None, None, None, :]
                 )
@@ -121,9 +144,10 @@ class Colony:
                 h = h_flat.reshape(pop, batch, R, C, H)
                 if record:
                     states.append(h)
-            out_h = h[:, :, :, out_cols, :].reshape(pop, batch, -1, H)   # (P, B, rows, H)
-            out = torch.einsum("pbkh,pho->pbko", out_h, w["w_out"]).mean(dim=2)
-            logits.append(out + w["b_out"][:, None, :])
+                if k >= ticks - readout:
+                    out_h = h[:, :, :, out_cols, :].reshape(pop, batch, -1, H)   # (P, B, rows, H)
+                    out_sum = out_sum + torch.einsum("pbkh,pho->pbko", out_h, w["w_out"]).mean(dim=2)
+            logits.append(out_sum / readout + w["b_out"][:, None, :])
         result = torch.stack(logits, dim=2)
         if record:
             return result, torch.stack(states, dim=2)

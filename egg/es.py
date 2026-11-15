@@ -51,6 +51,10 @@ class OpenAIES:
         lr: float,
         weight_decay: float = 0.0,
         seed: int = 0,
+        lr_decay: float = 1.0,
+        lr_min: float = 0.0,
+        sigma_decay: float = 1.0,
+        sigma_min: float = 0.0,
     ) -> None:
         if population < 2 or population % 2 != 0:
             raise ValueError(f"population must be an even number >= 2, got {population}")
@@ -62,6 +66,8 @@ class OpenAIES:
         self.sigma = float(sigma)
         self.weight_decay = float(weight_decay)
         self.seed = int(seed)
+        self.lr_decay, self.lr_min = float(lr_decay), float(lr_min)
+        self.sigma_decay, self.sigma_min = float(sigma_decay), float(sigma_min)
         self.generation = 0
         self.optimizer = torch.optim.Adam([self.theta], lr=lr)
         self._noise: torch.Tensor | None = None
@@ -113,12 +119,18 @@ class OpenAIES:
 
         self._noise = None
         self.generation += 1
+        # Schedules (Lange 2022, evosax): explore broadly first, then refine.
+        self.sigma = max(self.sigma * self.sigma_decay, self.sigma_min)
+        for group in self.optimizer.param_groups:
+            group["lr"] = max(group["lr"] * self.lr_decay, self.lr_min)
         return {
             "fitness_mean": float(fitness.mean()),
             "fitness_max": float(fitness.max()),
             "fitness_min": float(fitness.min()),
             "grad_norm": float(grad.norm()),
             "theta_norm": float(self.theta.detach().norm()),
+            "sigma": self.sigma,
+            "lr": self.optimizer.param_groups[0]["lr"],
         }
 
     def state_dict(self) -> dict[str, Any]:
@@ -130,6 +142,7 @@ class OpenAIES:
             "population": self.population,
             "sigma": self.sigma,
             "weight_decay": self.weight_decay,
+            "schedule": [self.lr_decay, self.lr_min, self.sigma_decay, self.sigma_min],
         }
 
     def load_state_dict(self, state: dict[str, Any]) -> None:
@@ -141,3 +154,5 @@ class OpenAIES:
         self.population = int(state["population"])
         self.sigma = float(state["sigma"])
         self.weight_decay = float(state["weight_decay"])
+        if "schedule" in state:  # absent in checkpoints written before schedules existed
+            self.lr_decay, self.lr_min, self.sigma_decay, self.sigma_min = map(float, state["schedule"])

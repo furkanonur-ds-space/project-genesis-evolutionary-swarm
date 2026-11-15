@@ -1,0 +1,46 @@
+# E002: copy task with the literature-driven fixes, gru. See EXPERIMENTS.md.
+# Changes vs E001: no input-output wrap shortcut, ticks >= grid width,
+# readout averaged over last ticks, evolved initial state, weight decay,
+# lr/sigma decay, random training lengths and longer test lengths.
+[run]
+name = "e002_gru"
+seed = 0
+
+[es]
+population = 128
+sigma = 0.05
+lr = 0.03
+weight_decay = 0.005
+lr_decay = 0.999
+lr_min = 0.005
+sigma_decay = 0.999
+sigma_min = 0.01
+generations = 3000
+log_every = 50
+checkpoint_every = 500
+
+[model]
+kind = "gru"
+
+[colony]
+rows = 6
+cols = 6
+hidden = 8
+message = 4
+embed = 8
+ticks = 6
+wrap_cols = false
+readout_ticks = 2
+learn_h0 = true
+
+[gru]
+hidden = 15
+learn_h0 = true
+
+[copy]
+digits = 4
+length = 4
+min_length = 1
+test_lengths = [6, 8]
+batch = 32
+val_batch = 512

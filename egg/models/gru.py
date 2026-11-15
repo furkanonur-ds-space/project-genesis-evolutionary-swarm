@@ -30,12 +30,14 @@ def gru_step(x_proj: torch.Tensor, h: torch.Tensor, w_h: torch.Tensor, b_h: torc
 
 
 class GRUBaseline:
-    def __init__(self, num_inputs: int, num_outputs: int, hidden: int) -> None:
+    def __init__(self, num_inputs: int, num_outputs: int, hidden: int, learn_h0: bool = False) -> None:
+        self.learn_h0 = learn_h0
         self.num_inputs = num_inputs
         self.num_outputs = num_outputs
         self.hidden = hidden
         h3 = 3 * hidden
-        self.spec = GenomeSpec([
+        extra = [ParamDef("h0", (hidden,), "zeros")] if learn_h0 else []
+        self.spec = GenomeSpec(extra + [
             ParamDef("w_x", (num_inputs, h3)),
             ParamDef("b_x", (h3,), "zeros"),
             ParamDef("w_h", (hidden, h3)),
@@ -44,11 +46,14 @@ class GRUBaseline:
             ParamDef("b_out", (num_outputs,), "zeros"),
         ])
 
-    def forward(self, genomes: torch.Tensor, tokens: torch.Tensor) -> torch.Tensor:
+    def forward(self, genomes: torch.Tensor, tokens: torch.Tensor, ticks: int | None = None) -> torch.Tensor:
+        """ticks is accepted for interface compatibility with Colony and ignored."""
         w = self.spec.unflatten(genomes)
         pop = genomes.shape[0] if genomes.dim() == 2 else 1
         batch, steps = tokens.shape
         h = torch.zeros(pop, batch, self.hidden, device=genomes.device)
+        if self.learn_h0:
+            h = h + w["h0"][:, None, :]
         # One-hot input times w_x is just a row lookup.
         x_proj_all = w["w_x"][:, tokens] + w["b_x"][:, None, None, :]  # (P, B, T, 3H)
         outputs = []

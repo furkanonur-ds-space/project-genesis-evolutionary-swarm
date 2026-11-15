@@ -106,3 +106,19 @@ class TrainToyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ScheduleTest(unittest.TestCase):
+    def test_decay_and_floor(self):
+        es = OpenAIES(torch.zeros(4), population=4, sigma=1.0, lr=0.1,
+                      sigma_decay=0.5, sigma_min=0.3, lr_decay=0.5, lr_min=0.04)
+        for _ in range(3):
+            stats = es.tell(sphere(es.ask()))
+        self.assertAlmostEqual(es.sigma, 0.3)
+        self.assertAlmostEqual(stats["lr"], 0.04)
+
+    def test_schedule_survives_checkpoint(self):
+        es = OpenAIES(torch.zeros(4), population=4, sigma=1.0, lr=0.1, sigma_decay=0.9)
+        other = OpenAIES(torch.zeros(4), population=4, sigma=1.0, lr=0.1)
+        other.load_state_dict(es.state_dict())
+        self.assertAlmostEqual(other.sigma_decay, 0.9)

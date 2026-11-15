@@ -124,3 +124,48 @@ class TrainCopyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LiteratureFixesTest(unittest.TestCase):
+    """Options added after the first literature review (see DECISIONS D008)."""
+
+    def _col(self, **kw):
+        base = dict(num_inputs=6, num_outputs=4, rows=2, cols=4, hidden=4, message=2, embed=3, ticks=2)
+        base.update(kw)
+        return Colony(**base)
+
+    def _first_output_depends_on_input(self, col):
+        g = col.spec.init(torch.Generator().manual_seed(0))[None] * 3
+        a = col.forward(g, torch.tensor([[0]]))
+        b = col.forward(g, torch.tensor([[1]]))
+        return not torch.allclose(a, b)
+
+    def test_wrap_shortcut_exists_on_torus(self):
+        # Input enters column 0 on tick 1 and reaches a neighbour on tick 2.
+        # With 4 columns only the wrap-around reaches the output column that fast.
+        self.assertTrue(self._first_output_depends_on_input(self._col(wrap_cols=True)))
+
+    def test_cylinder_removes_shortcut(self):
+        self.assertFalse(self._first_output_depends_on_input(self._col(wrap_cols=False)))
+
+    def test_readout_ticks_validation(self):
+        with self.assertRaises(ValueError):
+            self._col(ticks=2, readout_ticks=3)
+
+    def test_learn_h0_adds_params(self):
+        self.assertEqual(self._col(learn_h0=True).spec.size, self._col().spec.size + 4)
+        self.assertEqual(GRUBaseline(6, 4, 5, learn_h0=True).spec.size, GRUBaseline(6, 4, 5).spec.size + 5)
+
+    def test_ticks_override(self):
+        col = self._col(ticks=2, readout_ticks=1)
+        g = col.spec.init()[None]
+        _, states = col.forward(g, torch.zeros(1, 3, dtype=torch.long), record=True, ticks=4)
+        self.assertEqual(states.shape[2], 12)
+
+    def test_variable_length_and_collapse_metric(self):
+        task = CopyTask(digits=4, length=3)
+        b = task.sample(8, torch.Generator().manual_seed(0), length=6)
+        self.assertEqual(b.tokens.shape, (8, 12))
+        constant = torch.zeros(1, 8, 12, 4)
+        constant[..., 2] = 10.0
+        self.assertAlmostEqual(float(score(constant, b)["pred_entropy"][0]), 0.0, places=5)

@@ -38,6 +38,10 @@ class ESConfig:
     sigma: float = 0.05         # std of the Gaussian perturbation
     lr: float = 0.02            # Adam step size on the shared genome
     weight_decay: float = 0.0   # L2 pull toward zero, added to the update
+    lr_decay: float = 1.0       # lr is multiplied by this after every generation (1.0 = constant)
+    lr_min: float = 0.0
+    sigma_decay: float = 1.0    # sigma is multiplied by this after every generation
+    sigma_min: float = 0.0
     generations: int = 100
     log_every: int = 1
     checkpoint_every: int = 0   # 0 = only at the end
@@ -66,17 +70,24 @@ class ColonyConfig:
     message: int = 4
     embed: int = 8
     ticks: int = 3
+    ticks_max: int = 0          # > ticks: draw ticks per generation from [ticks, ticks_max]
+    wrap_cols: bool = True      # False: no wrap between input and output column (cylinder)
+    readout_ticks: int = 1      # average output logits over the last k ticks of each symbol
+    learn_h0: bool = False      # evolve the initial neuron state instead of zeros
 
 
 @dataclass
 class GRUConfig:
     hidden: int = 14
+    learn_h0: bool = False
 
 
 @dataclass
 class CopyTaskConfig:
     digits: int = 4
-    length: int = 3
+    length: int = 3             # (maximum) training length
+    min_length: int = 0         # > 0: draw the training length per generation from [min_length, length]
+    test_lengths: list[int] = field(default_factory=list)  # extra validation lengths, e.g. longer than trained
     batch: int = 32             # sequences per generation, shared by all lifetimes
     val_batch: int = 512        # fixed validation set for the center genome
 
@@ -130,6 +141,10 @@ def _check_scalar(hint: Any, value: Any, path: str) -> Any:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise ConfigError(f"{path}: expected float, got {value!r}")
         return float(value)
+    if typing.get_origin(hint) is list:
+        if not isinstance(value, list):
+            raise ConfigError(f"{path}: expected a list, got {value!r}")
+        return value
     if hint is str:
         if not isinstance(value, str):
             raise ConfigError(f"{path}: expected str, got {value!r}")
