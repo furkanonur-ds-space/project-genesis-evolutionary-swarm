@@ -1,0 +1,6 @@
+# Smoke test config: checks that the pipeline works end to end.
+[run]
+name = "smoke"
+seed = 42
+device = "auto"
+output_dir = "runs"

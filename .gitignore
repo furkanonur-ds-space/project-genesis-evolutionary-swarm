@@ -36,3 +36,13 @@ Thumbs.db
 
 # SharedBrain checkpoint (The Egg)
 shared_brain.pkl
+
+# Experiment outputs (each run writes its own folder)
+runs/
+
+# Markdown stays local: tracked in the separate .git-notes repo, never pushed.
+# Only README files are part of the public repo.
+*.md
+!README.md
+.git-notes/
+.md_backup/

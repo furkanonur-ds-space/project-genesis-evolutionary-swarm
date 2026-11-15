@@ -1,159 +1,55 @@
-# Project Genesis - Neuro-Evolutionary Swarm Simulation
+# The Egg
 
-Project Genesis is a Python/PyGame simulation where autonomous agents evolve over generations to survive and gather food.
+Research project: can a colony of simple neuron-agents that all share one
+genome learn to read and write serially, the way a human eye scans a line
+and a hand writes one letter at a time?
 
-Each agent is controlled by a lightweight neural network implemented with NumPy. The population evolves using a Genetic Algorithm (selection, crossover, mutation).
+Inspired by Andy Weir's short story "The Egg": every neuron is the same
+soul living a different life. Evolution improves the shared genome across
+lifetimes; each lifetime learns locally from its own experience.
 
-## Features
+## Status
 
-- Vector-based agent physics (position, velocity, acceleration)
-- Health and survival mechanics
-- Sensor-driven neural control
-- Pure NumPy feed-forward neural network (no deep learning frameworks)
-- Genetic Algorithm with elitism and mutation
-- Real-time PyGame visualization at 60 FPS
-- Generation-based evolution loop
+Early stage. Infrastructure is in place (configs, seeding, run logging,
+tests). The evolution trainer and the neuron-agent colony are next.
 
-## Architecture
+## Layout
 
-### `main.py`
-- Simulation loop and rendering
-- Population lifecycle and generation transitions
-- UI overlay:
-  - `Generation: X`
-  - `Alive: Y`
-  - `Best Fitness: Z`
-
-### `agent.py`
-- Agent dynamics and behavior
-- Inputs to brain:
-  - normalized distance to nearest food
-  - angle to nearest food relative to heading
-  - normalized health level
-- Outputs from brain:
-  - thrust (speed)
-  - steering (turn)
-- Health logic:
-  - starts at `100`
-  - decays by `0.5` per frame
-  - eating food gives `+20`
-  - dies when health `<= 0`
-
-### `brain.py`
-- Feed-forward network: `3 -> 8 -> 2`
-- Activations: `tanh`
-- DNA representation:
-  - flattened array of all weights and biases
-- Supports:
-  - clone
-  - crossover
-  - mutation (Gaussian noise)
-
-### `food.py`
-- Food spawn and respawn logic
-- Nearest-food query for agent sensors
-- Rendering of pellets
-
-### `genetic_algorithm.py`
-- Fitness function:
-  - `fitness = time_alive + (food_eaten * 50)`
-- Selection:
-  - top `20%` elites
-- Reproduction:
-  - elites copied forward
-  - others produced via crossover of elite parents
-- Mutation:
-  - `5%` per-gene mutation probability (Gaussian noise)
-
-## Requirements
-
-- Python 3.10+
-- `numpy`
-- `pygame` API (works via `pygame-ce` in this workspace)
-
-## Quick Start (Windows PowerShell)
-
-From `C:\Projeler\Genesis`:
-
-```powershell
-cd .\project_genesis
-C:\Projeler\Genesis\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-pip install pygame-ce
-python main.py
+```
+egg/            main package
+configs/        TOML experiment configs
+tests/          unit tests (stdlib unittest)
+tools/          helper scripts
+legacy/phase0/  archived phase 0 prototype (git tag: phase0-archive)
+runs/           experiment outputs (git ignored)
 ```
 
-Notes:
-- In this environment, `pygame-ce` is used and imported as `pygame`.
-- If PowerShell blocks script activation, run:
+## Setup
 
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+Python 3.14. Create a virtual environment, then install NumPy and a
+PyTorch build that matches your GPU:
+
+```
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install "numpy>=2.0"
+.venv\Scripts\python.exe -m pip install torch --index-url https://download.pytorch.org/whl/cu128
 ```
 
-## Alternative Setup Script
+CUDA 12.8 builds (cu128) or newer are required for RTX 50 series GPUs.
+The code also runs on CPU.
 
-A bootstrap script is included:
+## Quick start
 
-```powershell
-.\setup_project_genesis.ps1
+```
+.venv\Scripts\python.exe -m unittest discover -s tests -t .
+.venv\Scripts\python.exe -m egg.smoke --config configs/smoke.toml
 ```
 
-It creates:
-- project folder
-- virtual environment
-- `requirements.txt`
-- source files
+Override any config value from the command line:
 
-Then install dependencies and run as shown above.
-
-## Controls
-
-- Close the window to stop simulation.
-
-## Simulation Lifecycle
-
-- Starts with:
-  - `50` agents
-  - `30` food pellets
-- Generation ends when:
-  - all agents die, or
-  - frame limit is reached (`1800` frames)
-- New generation is created from evolved brains.
-
-## Important Current Behavior
-
-- Evolution is **in-memory only**.
-- Closing the app resets progress.
-- Every new run starts from **Generation 1**.
-
-If needed, checkpoint persistence (`save/load` evolved brains) can be added in a future update.
-
-## Troubleshooting
-
-### `can't open file ...\main.py`
-You are likely running from the wrong directory.
-
-Use either:
-
-```powershell
-cd C:\Projeler\Genesis\project_genesis
-python main.py
+```
+.venv\Scripts\python.exe -m egg.smoke --config configs/smoke.toml --set run.seed=7
 ```
 
-or:
-
-```powershell
-C:\Projeler\Genesis\.venv\Scripts\python.exe C:\Projeler\Genesis\project_genesis\main.py
-```
-
-### Yellow import warnings in VS Code
-- Ensure selected interpreter is:
-  - `C:\Projeler\Genesis\.venv\Scripts\python.exe`
-- Install dependencies in that same environment:
-
-```powershell
-pip install numpy pygame-ce
-```
-
-- If warnings persist, run `Developer: Reload Window` in VS Code.
+Each run writes `config.json`, `env.json` and `metrics.csv` to its own
+folder under `runs/`.

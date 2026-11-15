@@ -1,2 +1,6 @@
-pygame
-numpy
+# Core
+numpy>=2.0
+# PyTorch with CUDA: install from the PyTorch index that matches your GPU,
+# see README.md. Example for CUDA 12.8 (needed for RTX 50 series):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+torch>=2.6
