@@ -10,6 +10,7 @@ from egg.models import Colony, GRUBaseline
 from egg.models.colony import position_code
 from egg.tasks.copy_task import CopyTask, score
 from egg.train_copy import train
+from egg.viz import export
 
 
 class GenomeSpecTest(unittest.TestCase):
@@ -114,6 +115,11 @@ class TrainCopyTest(unittest.TestCase):
                 es, run = train(config, quiet=True)
                 self.assertEqual(es.generation, 3)
                 self.assertTrue((run.path / "checkpoint.pt").exists())
+                if kind == "colony":
+                    html = export(run.path, examples=2, out=None)
+                    text = html.read_text(encoding="utf-8")
+                    self.assertIn('"rows": 3', text)
+                    self.assertNotIn("__DATA__", text)
 
 
 if __name__ == "__main__":

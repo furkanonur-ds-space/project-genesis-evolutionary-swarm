@@ -161,6 +161,11 @@ def apply_overrides(data: dict[str, Any], overrides: list[str]) -> dict[str, Any
     return data
 
 
+def config_from_dict(data: dict[str, Any]) -> Config:
+    """Rebuild a Config from a dict, e.g. a run folder's config.json."""
+    return _from_dict(Config, data, "")
+
+
 def load_config(path: str | Path | None = None, overrides: list[str] | None = None) -> Config:
     """Load a config file (or defaults when path is None) and apply overrides."""
     data: dict[str, Any] = {}
